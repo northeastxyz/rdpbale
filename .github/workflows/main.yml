@@ -10,30 +10,55 @@ jobs:
     - name: Mengunduh Cloudflared
       run: |
         curl -L --output cloudflared.exe https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe
-        
-    - name: Mengaktifkan Akses RDP
+
+    - name: Mengaktifkan Akses RDP & Bypass Security
+      shell: powershell
       run: |
-        # Mengaktifkan protokol Remote Desktop
+        # 1. Matikan Firewall total agar tidak ada blokir internal
+        Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
+        
+        # 2. Aktifkan Remote Desktop dan NLA
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
         
-        # Mengatur Password akun runneradmin secara paksa
-        # Gunakan 'net user' tanpa menghapus akun built-in
-        $pass = "Doominator2012@"
-        net user runneradmin $pass
+        # 3. Ganti password runneradmin secara paksa menggunakan metode ADSI (Bypass Error 1371)
+        $admin = [adsi]"WinNT://localhost/runneradmin,user"
+        $admin.SetPassword("Doominator2012@")
+        $admin.SetInfo()
         
+        Write-Host "Konfigurasi Windows Berhasil!"
+
     - name: Membuat Tunnel Cloudflare
       shell: pwsh
       run: |
         # Jalankan tunnel di background
         Start-Process .\cloudflared.exe -ArgumentList "tunnel --url tcp://localhost:3389" -RedirectStandardOutput "tunnel.log"
-        Start-Sleep -Seconds 15
+        
+        # Tunggu tunnel siap
+        Start-Sleep -Seconds 20
+        
+        # Ambil URL dari log
         $log = Get-Content tunnel.log
         $url = $log | Select-String -Pattern "https://.*\.trycloudflare.com" | ForEach-Object { $_.Matches.Value }
         
+        # Bersihkan URL (Hapus https:// dan / di akhir)
+        $clean_url = $url.Replace("https://", "").Replace("/", "")
+        
         Write-Host "==========================================="
-        Write-Host "ALAMAT RDP ANDA : $url"
+        Write-Host "ALAMAT RDP ANDA : $clean_url"
+        Write-Host "USERNAME        : runneradmin"
+        Write-Host "PASSWORD        : Doominator2012@"
+        Write-Host "==========================================="
+        
+    - name: Menjaga Workflow Tetap Hidup
+      run: |
+        $tipe = 0
+        while($tipe -lt 360) {
+          Write-Output "RDP Sedang Berjalan... (Menit ke-$tipe)"
+          Start-Sleep -Seconds 60
+          $tipe++
+        }
         Write-Host "USERNAME        : runneradmin"
         Write-Host "PASSWORD        : Doominator2012@"
         Write-Host "==========================================="
