@@ -1,0 +1,43 @@
+name: Windows-RDP-Cloudflare
+
+on: 
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - name: Mengunduh Cloudflared
+      run: |
+        curl -L --output cloudflared.exe https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe
+        
+    - name: Mengaktifkan Akses RDP
+      run: |
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
+        # Mengatur password menjadi bale123
+        net user runneradmin bale123
+        
+    - name: Membuat Tunnel Cloudflare
+      shell: pwsh
+      run: |
+        Start-Process .\cloudflared.exe -ArgumentList "tunnel --url tcp://localhost:3389" -RedirectStandardOutput "tunnel.log"
+        Start-Sleep -Seconds 10
+        $log = Get-Content tunnel.log
+        $url = $log | Select-String -Pattern "https://.*\.trycloudflare.com" | ForEach-Object { $_.Matches.Value }
+        Write-Host "-------------------------------------------"
+        Write-Host "ALAMAT TUNNEL: $url"
+        Write-Host "Username: runneradmin"
+        Write-Host "Password: bale123"
+        Write-Host "-------------------------------------------"
+        
+    - name: Menjaga Workflow Tetap Hidup
+      run: |
+        $tipe = 0
+        while($tipe -lt 360) {
+          Write-Output "Workflow aktif... (Menit ke-$tipe)"
+          Start-Sleep -Seconds 60
+          $tipe++
+        }
+        
