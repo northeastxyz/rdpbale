@@ -1,93 +1,21 @@
-name: Windows-RDP-Cloudflare
-
-on: 
-  workflow_dispatch:
+name: RDP-Cloudflare-Bale
+on: workflow_dispatch
 
 jobs:
   build:
     runs-on: windows-latest
     steps:
-    - name: Mengunduh Cloudflared
+    - name: Set Password
+      run: net user runneradmin BaleRDP123!
+    - name: Konfigurasi RDP
       run: |
-        curl -L --output cloudflared.exe https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe
-
-    - name: Mengaktifkan Akses RDP & Bypass Security
-      shell: powershell
-      run: |
-        # 1. Matikan Firewall total agar tidak ada blokir internal
-        Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
-        
-        # 2. Aktifkan Remote Desktop dan NLA
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
-        
-        # 3. Ganti password runneradmin secara paksa menggunakan metode ADSI (Bypass Error 1371)
-        $admin = [adsi]"WinNT://localhost/runneradmin,user"
-        $admin.SetPassword("Doominator2012@")
-        $admin.SetInfo()
-        
-        Write-Host "Konfigurasi Windows Berhasil!"
-
-    - name: Membuat Tunnel Cloudflare
-      shell: pwsh
+    - name: Install Cloudflare
       run: |
-        # Jalankan tunnel di background
-        Start-Process .\cloudflared.exe -ArgumentList "tunnel --url tcp://localhost:3389" -RedirectStandardOutput "tunnel.log"
-        
-        # Tunggu tunnel siap
-        Start-Sleep -Seconds 20
-        
-        # Ambil URL dari log
-        $log = Get-Content tunnel.log
-        $url = $log | Select-String -Pattern "https://.*\.trycloudflare.com" | ForEach-Object { $_.Matches.Value }
-        
-        # Bersihkan URL (Hapus https:// dan / di akhir)
-        $clean_url = $url.Replace("https://", "").Replace("/", "")
-        
-        Write-Host "==========================================="
-        Write-Host "ALAMAT RDP ANDA : $clean_url"
-        Write-Host "USERNAME        : runneradmin"
-        Write-Host "PASSWORD        : Doominator2012@"
-        Write-Host "==========================================="
-        
-    - name: Menjaga Workflow Tetap Hidup
+        Invoke-WebRequest https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.msi -OutFile cloudflared.msi
+        Start-Process msiexec.exe -ArgumentList "/i cloudflared.msi /quiet" -Wait
+    - name: Ambil Link Koneksi
       run: |
-        $tipe = 0
-        while($tipe -lt 360) {
-          Write-Output "RDP Sedang Berjalan... (Menit ke-$tipe)"
-          Start-Sleep -Seconds 60
-          $tipe++
-        }
-        Write-Host "USERNAME        : runneradmin"
-        Write-Host "PASSWORD        : Doominator2012@"
-        Write-Host "==========================================="
-        
-    - name: Menjaga Workflow Tetap Hidup
-      run: |
-        $tipe = 0
-        while($tipe -lt 360) {
-          Write-Output "RDP Aktif... (Menit ke-$tipe)"
-          Start-Sleep -Seconds 60
-          $tipe++
-        }
-        Write-Host "KONEKSI RDP BERHASIL DISIAPKAN"
-        Write-Host "URL TUNNEL : $url"
-        Write-Host "USERNAME   : runneradmin"
-        Write-Host "PASSWORD   : Doominator2012@"
-        Write-Host "==========================================="
-        
-    - name: Menjaga Workflow Tetap Hidup
-      run: |
-        $tipe = 0
-        while($tipe -lt 360) {
-          Write-Output "RDP Aktif... (Menit ke-$tipe)"
-          Start-Sleep -Seconds 60
-          $tipe++
-        }
-        $tipe = 0
-        while($tipe -lt 360) {
-          Write-Output "RDP Aktif... (Menit ke-$tipe)"
-          Start-Sleep -Seconds 60
-          $tipe++
-        }
+        echo "SEDANG MENGHUBUNGKAN... TUNGGU 10 DETIK..."
+        & "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel --url tcp://localhost:3389
