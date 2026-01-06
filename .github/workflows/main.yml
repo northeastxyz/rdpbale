@@ -18,22 +18,34 @@ jobs:
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
         
-        # Mengatur User dan Password (Doominator2012@)
-        # Kami menghapus user jika sudah ada untuk menghindari konflik, lalu membuatnya kembali
-        net user runneradmin /delete
-        net user runneradmin Doominator2012@ /add
-        net localgroup administrators runneradmin /add
+        # Mengatur Password akun runneradmin secara paksa
+        # Gunakan 'net user' tanpa menghapus akun built-in
+        $pass = "Doominator2012@"
+        net user runneradmin $pass
         
     - name: Membuat Tunnel Cloudflare
       shell: pwsh
       run: |
-        # Menjalankan tunnel di background dan menyimpan log untuk mengambil URL
+        # Jalankan tunnel di background
         Start-Process .\cloudflared.exe -ArgumentList "tunnel --url tcp://localhost:3389" -RedirectStandardOutput "tunnel.log"
         Start-Sleep -Seconds 15
         $log = Get-Content tunnel.log
         $url = $log | Select-String -Pattern "https://.*\.trycloudflare.com" | ForEach-Object { $_.Matches.Value }
         
         Write-Host "==========================================="
+        Write-Host "ALAMAT RDP ANDA : $url"
+        Write-Host "USERNAME        : runneradmin"
+        Write-Host "PASSWORD        : Doominator2012@"
+        Write-Host "==========================================="
+        
+    - name: Menjaga Workflow Tetap Hidup
+      run: |
+        $tipe = 0
+        while($tipe -lt 360) {
+          Write-Output "RDP Aktif... (Menit ke-$tipe)"
+          Start-Sleep -Seconds 60
+          $tipe++
+        }
         Write-Host "KONEKSI RDP BERHASIL DISIAPKAN"
         Write-Host "URL TUNNEL : $url"
         Write-Host "USERNAME   : runneradmin"
