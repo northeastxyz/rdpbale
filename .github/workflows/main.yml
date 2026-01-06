@@ -16,28 +16,27 @@ jobs:
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
-        # Mengatur password menjadi bale123
-        net user runneradmin bale123
+        # Mengatur password sesuai permintaan user
+        net user runneradmin Doominator2012@
         
     - name: Membuat Tunnel Cloudflare
       shell: pwsh
       run: |
         Start-Process .\cloudflared.exe -ArgumentList "tunnel --url tcp://localhost:3389" -RedirectStandardOutput "tunnel.log"
-        Start-Sleep -Seconds 10
+        Start-Sleep -Seconds 15
         $log = Get-Content tunnel.log
         $url = $log | Select-String -Pattern "https://.*\.trycloudflare.com" | ForEach-Object { $_.Matches.Value }
         Write-Host "-------------------------------------------"
         Write-Host "ALAMAT TUNNEL: $url"
         Write-Host "Username: runneradmin"
-        Write-Host "Password: bale123"
+        Write-Host "Password: Doominator2012@"
         Write-Host "-------------------------------------------"
         
     - name: Menjaga Workflow Tetap Hidup
       run: |
         $tipe = 0
         while($tipe -lt 360) {
-          Write-Output "Workflow aktif... (Menit ke-$tipe)"
+          Write-Output "RDP Aktif... (Menit ke-$tipe)"
           Start-Sleep -Seconds 60
           $tipe++
         }
-        
