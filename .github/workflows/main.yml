@@ -13,27 +13,41 @@ jobs:
         
     - name: Mengaktifkan Akses RDP
       run: |
+        # Mengaktifkan protokol Remote Desktop
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
-        # Mengatur password sesuai permintaan user
-        net user runneradmin Doominator2012@
+        
+        # Mengatur User dan Password (Doominator2012@)
+        # Kami menghapus user jika sudah ada untuk menghindari konflik, lalu membuatnya kembali
+        net user runneradmin /delete
+        net user runneradmin Doominator2012@ /add
+        net localgroup administrators runneradmin /add
         
     - name: Membuat Tunnel Cloudflare
       shell: pwsh
       run: |
+        # Menjalankan tunnel di background dan menyimpan log untuk mengambil URL
         Start-Process .\cloudflared.exe -ArgumentList "tunnel --url tcp://localhost:3389" -RedirectStandardOutput "tunnel.log"
         Start-Sleep -Seconds 15
         $log = Get-Content tunnel.log
         $url = $log | Select-String -Pattern "https://.*\.trycloudflare.com" | ForEach-Object { $_.Matches.Value }
-        Write-Host "-------------------------------------------"
-        Write-Host "ALAMAT TUNNEL: $url"
-        Write-Host "Username: runneradmin"
-        Write-Host "Password: Doominator2012@"
-        Write-Host "-------------------------------------------"
+        
+        Write-Host "==========================================="
+        Write-Host "KONEKSI RDP BERHASIL DISIAPKAN"
+        Write-Host "URL TUNNEL : $url"
+        Write-Host "USERNAME   : runneradmin"
+        Write-Host "PASSWORD   : Doominator2012@"
+        Write-Host "==========================================="
         
     - name: Menjaga Workflow Tetap Hidup
       run: |
+        $tipe = 0
+        while($tipe -lt 360) {
+          Write-Output "RDP Aktif... (Menit ke-$tipe)"
+          Start-Sleep -Seconds 60
+          $tipe++
+        }
         $tipe = 0
         while($tipe -lt 360) {
           Write-Output "RDP Aktif... (Menit ke-$tipe)"
