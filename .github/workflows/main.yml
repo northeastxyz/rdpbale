@@ -19,21 +19,24 @@ jobs:
         Invoke-WebRequest https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.msi -OutFile cloudflared.msi
         Start-Process msiexec.exe -ArgumentList "/i cloudflared.msi /quiet" -Wait
 
-    - name: Download MuMu Player Installer
+    - name: Download & Auto Install MuMu Player
       shell: powershell
       run: |
-        $url = "https://res.mumuplayer.com/global/mumu_installer/MuMuInstaller_1.1.1.6_country-id_all_1626245241.exe"
+        $url = "https://a11.gdl.netease.com/MuMuInstaller_1.3.0.2_gw-offline-x64_all_1636102259.exe"
         $outpath = "$env:USERPROFILE\Downloads\MuMuInstaller.exe"
-        Write-Host "Sedang mengunduh MuMu Player..."
-        try {
-            Invoke-WebRequest -Uri $url -OutFile $outpath -ErrorAction Stop
-            Write-Host "Berhasil: MuMuInstaller.exe tersimpan di folder Downloads."
-        } catch {
-            Write-Host "Gagal mendownload otomatis karena link host tidak ditemukan atau mati."
-            Write-Host "Solusi: Silahkan buka browser di dalam RDP nanti dan download manual di mumuplayer.com"
-        }
+        
+        Write-Host "Sedang mendownload MuMu Player Offline Installer..."
+        Invoke-WebRequest -Uri $url -OutFile $outpath -UserAgent "Mozilla/5.0"
+        
+        Write-Host "Memulai Instalasi MuMu Player (Silahkan tunggu beberapa saat)..."
+        Start-Process -FilePath $outpath -ArgumentList "/S" -Wait
+        Write-Host "Instalasi selesai atau sedang berjalan di background."
 
     - name: Menjalankan Tunnel & Ambil Link
+      shell: cmd
       run: |
-        echo "TUNGGU... CARI LINK .trycloudflare.com DI LOG BAWAH INI"
-        & "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel --url tcp://localhost:3389
+        echo "===================================================="
+        echo "CARI LINK .trycloudflare.com DI BAWAH INI"
+        echo "===================================================="
+        cd "C:\Program Files (x86)\cloudflared"
+        cloudflared.exe tunnel --url tcp://localhost:3389
