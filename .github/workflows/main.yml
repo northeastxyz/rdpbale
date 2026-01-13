@@ -7,15 +7,26 @@ jobs:
     steps:
     - name: Set Password
       run: net user runneradmin BaleRDP123!
+
     - name: Konfigurasi RDP
       run: |
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
+
     - name: Install Cloudflare
       run: |
         Invoke-WebRequest https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.msi -OutFile cloudflared.msi
         Start-Process msiexec.exe -ArgumentList "/i cloudflared.msi /quiet" -Wait
-    - name: Ambil Link Koneksi
+
+    - name: Download MuMu Player Installer
       run: |
-        echo "SEDANG MENGHUBUNGKAN... TUNGGU 10 DETIK..."
+        $url = "https://res.mumuplayer.com/global/mumu_installer/MuMuInstaller_1.1.1.3_country-us_all_1609750960.exe"
+        $outpath = "$env:USERPROFILE\Downloads\MuMuInstaller.exe"
+        Invoke-WebRequest -Uri $url -OutFile $outpath
+        echo "MuMu Player telah di-download ke folder Downloads"
+
+    - name: Menjalankan Tunnel & Ambil Link
+      run: |
+        echo "MENGHUBUNGKAN TUNNEL... CEK LOG DI BAWAH UNTUK LINK .trycloudflare.com"
         & "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel --url tcp://localhost:3389
