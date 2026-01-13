@@ -7,37 +7,15 @@ jobs:
     steps:
     - name: Set Password
       run: net user runneradmin BaleRDP123!
-
     - name: Konfigurasi RDP
       run: |
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
-
     - name: Install Cloudflare
       run: |
         Invoke-WebRequest https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.msi -OutFile cloudflared.msi
         Start-Process msiexec.exe -ArgumentList "/i cloudflared.msi /quiet" -Wait
-
-    - name: Download & Auto Install MuMu Player
-      shell: powershell
+    - name: Ambil Link Koneksi
       run: |
-        $url = "https://a11.gdl.netease.com/MuMu_5.0.9_gw-win-download_all_1767063785.exe"
-        $outpath = "$env:USERPROFILE\Downloads\MuMuInstaller_New.exe"
-        
-        Write-Host "Sedang mengunduh MuMu Player versi terbaru..."
-        Invoke-WebRequest -Uri $url -OutFile $outpath -UserAgent "Mozilla/5.0"
-        
-        Write-Host "Memulai instalasi... Mohon tunggu..."
-        # Menjalankan installer dengan mode silent
-        Start-Process -FilePath $outpath -ArgumentList "/S" -Wait
-        Write-Host "Proses download dan instalasi selesai."
-
-    - name: Menjalankan Tunnel & Ambil Link
-      shell: cmd
-      run: |
-        echo "===================================================="
-        echo "TUNGGU 10-20 DETIK LALU CARI LINK .trycloudflare.com"
-        echo "===================================================="
-        cd "C:\Program Files (x86)\cloudflared"
-        cloudflared.exe tunnel --url tcp://localhost:3389
+        echo "SEDANG MENGHUBUNGKAN... TUNGGU 10 DETIK..."
+        & "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel --url tcp://localhost:3389
